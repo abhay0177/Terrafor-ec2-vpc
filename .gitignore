@@ -1,0 +1,6 @@
+ssh-key
+ssh-key.pub
+ssh*
+.terraform/
+*.tfstate
+*.tfstate.backup
