@@ -1,0 +1,72 @@
+---
+- name: Deploying node project 
+  hosts: servers
+  become: true
+
+  vars:
+    node_app_repo: "https://github.com/abhay0177/sample-node-project.git"
+    node_app_directory: "/home/ubuntu/node-project"
+
+  tasks:
+    - name: Installing nginx on server
+      apt:
+        name: nginx
+        state: latest
+        update_cache: yes
+      tags: install-nginx
+
+    - name: starting nginx on server
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+      tags: service-start-nginx
+
+    - name: Install Git on server
+      apt:
+        name: git
+        state: present
+
+    - name: Clone node project Repository from GitHub
+      git:
+        repo: "{{ node_app_repo }}"
+        dest: "{{ node_app_directory }}"
+        version: "main"
+
+    - name: Build Docker image for the node project
+      command: docker build -t node-project .
+      args:
+        chdir: "{{ node_app_directory }}"
+
+    - name: Run Docker container for the node project
+      command: docker run -d -p 3000:3000 --name node-project-container node-project
+      args:
+        chdir: "{{ node_app_directory }}"
+    
+    - name: Delete default Nginx configuration file
+      file:
+        path: /etc/nginx/sites-available/default
+        state: absent
+
+    - name: Create new Nginx configuration file for reverse proxy
+      copy:
+        dest: /etc/nginx/sites-available/default
+        content: |
+          server {
+              listen 80;
+              server_name _;
+              
+              location / {
+                  proxy_pass http://localhost:3000;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection 'upgrade';
+                  proxy_set_header Host $host;
+                  proxy_cache_bypass $http_upgrade;
+              }
+          }
+
+    - name: Restart Nginx to apply the new configuration
+      service:
+        name: nginx
+        state: restarted
