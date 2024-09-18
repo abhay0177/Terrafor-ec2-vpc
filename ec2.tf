@@ -12,18 +12,15 @@ resource "aws_instance" "my_ec2_instance" {
   }
   user_data = <<-EOF
 #!/bin/bash
-sudo apt-get update -y
-sudo apt-get install -y nginx
-sudo systemctl start nginx
-sudo systemctl enable nginx
-
 sudo apt-get -y update
 sudo apt-get install -y docker.io
 sudo systemctl start docker
 sudo systemctl enable docker
+sudo apt-get update -y
+sleep 5
 sudo chown $USER /var/run/docker.sock
-
-sudo apt-get install -y git 
+sudo chown ubuntu /var/run/docker.sock
+sudo usermod -aG docker ubuntu
 
 EOF
 }
